@@ -1,0 +1,19 @@
+{
+  "name": "rifa-cron",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@repo/db": "*",
+    "@repo/payments": "*",
+    "@repo/shared": "*",
+    "tsx": "^4.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  }
+}
