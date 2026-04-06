@@ -1,0 +1,19 @@
+{
+  "name": "@repo/payments",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@repo/db": "*",
+    "@repo/shared": "*",
+    "@repo/whatsapp": "*",
+    "mercadopago": "^2.3.0",
+    "qrcode": "^1.5.4",
+    "zod": "^3.24.2"
+  },
+  "devDependencies": {
+    "@types/qrcode": "^1.5.5",
+    "typescript": "^5.8.2"
+  }
+}

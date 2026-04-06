@@ -1,0 +1,303 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RaffleStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+  DRAWN
+}
+
+enum NumberSelectionMode {
+  MANUAL
+  RANDOM
+  MIXED
+}
+
+enum RaffleNumberStatus {
+  AVAILABLE
+  RESERVED
+  PAID
+  BLOCKED
+}
+
+enum ReservationStatus {
+  PENDING
+  PAID
+  EXPIRED
+  CANCELLED
+}
+
+enum PixProvider {
+  MERCADOPAGO
+  MOCK
+}
+
+enum PixInternalStatus {
+  PENDING
+  APPROVED
+  EXPIRED
+  FAILED
+  CANCELLED
+}
+
+enum WhatsAppProvider {
+  CONSOLE
+  META
+  ZAPI
+  EVOLUTION
+  MOCK
+}
+
+enum WhatsAppMessageType {
+  PAYMENT_APPROVED
+  RESERVATION_CREATED
+  PAYMENT_PENDING_REMINDER
+}
+
+enum WhatsAppSendStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+/// Fila assíncrona: webhook recebido no web → worker processa
+enum WebhookInboxStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+}
+
+model Raffle {
+  id                       String              @id @default(cuid())
+  slug                     String              @unique
+  titulo                   String
+  descricao                String              @db.Text
+  premio                   String              @db.Text
+  imagem                   String?
+  valorNumero              Decimal             @map("valor_numero") @db.Decimal(12, 2)
+  quantidadeTotal          Int                 @map("quantidade_total")
+  numeroPadding            Int                 @default(4) @map("numero_padding")
+  dataSorteio              DateTime            @map("data_sorteio")
+  regulamento              String              @db.Text
+  modoSelecaoNumeros       NumberSelectionMode @map("modo_selecao_numeros")
+  quantidadeMinimaCompra   Int                 @map("quantidade_minima_compra")
+  quantidadeMaximaCompra   Int                 @map("quantidade_maxima_compra")
+  multiploCompra           Int?                @map("multiplo_compra")
+  reservaExpiraMinutos     Int                 @default(20) @map("reserva_expira_minutos")
+  exibirRankingPublico     Boolean             @default(true) @map("exibir_ranking_publico")
+  anonimizarRankingPublico Boolean             @default(true) @map("anonimizar_ranking_publico")
+  tamanhoRankingPublico    Int                 @default(10) @map("tamanho_ranking_publico")
+  ativarFeedCompras        Boolean             @default(true) @map("ativar_feed_compras")
+  ativarContadorTempoReal  Boolean             @default(true) @map("ativar_contador_tempo_real")
+  ativarWhatsapp           Boolean             @default(true) @map("ativar_whatsapp")
+  mensagemWhatsappPadrao   String?             @map("mensagem_whatsapp_padrao") @db.Text
+  status                   RaffleStatus        @default(DRAFT)
+  numeroVencedorId         String?             @unique @map("numero_vencedor_id")
+  sorteadoEm               DateTime?           @map("sorteado_em")
+  createdAt                DateTime            @default(now()) @map("created_at")
+  updatedAt                DateTime            @updatedAt @map("updated_at")
+
+  numbers        RaffleNumber[] @relation("RaffleNumbers")
+  reservations   Reservation[]
+  numeroVencedor RaffleNumber?  @relation("WinnerNumber", fields: [numeroVencedorId], references: [id])
+
+  @@map("rifas")
+}
+
+model RaffleNumber {
+  id            String             @id @default(cuid())
+  raffleId      String             @map("rifa_id")
+  numero        String
+  status        RaffleNumberStatus @default(AVAILABLE)
+  blockedReason String?            @map("blocked_reason") @db.Text
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  raffle          Raffle              @relation("RaffleNumbers", fields: [raffleId], references: [id], onDelete: Cascade)
+  reservationNums ReservationNumber[]
+  wonRaffle       Raffle?             @relation("WinnerNumber")
+
+  @@unique([raffleId, numero])
+  @@index([raffleId, status])
+  @@map("numeros_rifa")
+}
+
+model Participant {
+  id            String   @id @default(cuid())
+  nome          String
+  telefone      String
+  email         String
+  cpf           String?
+  aceitouTermos Boolean  @default(false) @map("aceitou_termos")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  reservations     Reservation[]
+  whatsappMessages WhatsAppMessage[]
+
+  @@index([telefone])
+  @@index([email])
+  @@map("participantes")
+}
+
+model Reservation {
+  id            String            @id @default(cuid())
+  codigo        String            @unique
+  raffleId      String            @map("rifa_id")
+  participantId String            @map("participante_id")
+  status        ReservationStatus @default(PENDING)
+  quantidade    Int
+  valorTotal    Decimal           @map("valor_total") @db.Decimal(12, 2)
+  expiresAt     DateTime          @map("expires_at")
+  paidAt        DateTime?         @map("paid_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+  updatedAt     DateTime          @updatedAt @map("updated_at")
+
+  raffle       Raffle              @relation(fields: [raffleId], references: [id], onDelete: Cascade)
+  participant  Participant         @relation(fields: [participantId], references: [id], onDelete: Cascade)
+  numbers      ReservationNumber[]
+  pixPayments  PixPayment[]
+  whatsappMsgs WhatsAppMessage[]
+
+  @@index([raffleId, status])
+  @@index([expiresAt])
+  @@map("reservas")
+}
+
+model ReservationNumber {
+  id             String @id @default(cuid())
+  reservationId  String @map("reserva_id")
+  raffleNumberId String @map("numero_rifa_id")
+
+  reservation  Reservation  @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  raffleNumber RaffleNumber @relation(fields: [raffleNumberId], references: [id], onDelete: Cascade)
+
+  @@unique([reservationId, raffleNumberId])
+  @@unique([raffleNumberId])
+  @@map("reserva_numeros")
+}
+
+model PixPayment {
+  id                String            @id @default(cuid())
+  reservationId     String            @map("reserva_id")
+  provider          PixProvider
+  /// Id do pagamento no gateway (Mercado Pago) — único quando presente
+  externalPaymentId String?           @unique @map("external_payment_id")
+  externalReference String            @unique @map("external_reference")
+  /// Identificador Pix (copia e cola truncado ou id alternativo) — único quando presente
+  txid              String?           @unique
+  statusInterno     PixInternalStatus @default(PENDING) @map("status_interno")
+  statusGateway     String?           @map("status_gateway")
+  valor             Decimal           @db.Decimal(12, 2)
+  qrCodeText        String?           @map("qr_code_text") @db.Text
+  qrCodeBase64      String?           @map("qr_code_base64") @db.Text
+  pixCopiaECola     String?           @map("pix_copia_e_cola") @db.Text
+  expiresAt         DateTime          @map("expires_at")
+  paidAt            DateTime?         @map("paid_at")
+  webhookReceivedAt DateTime?         @map("webhook_received_at")
+  idempotencyKey    String?           @unique @map("idempotency_key")
+  rawResponseJson   Json?             @map("raw_response_json")
+  integrationError  String?           @map("integration_error") @db.Text
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+  @@index([statusInterno])
+  @@map("pagamentos_pix")
+}
+
+/// Auditoria opcional (payload bruto)
+model WebhookPixLog {
+  id             String    @id @default(cuid())
+  provider       PixProvider
+  topic          String?
+  resourceId     String?   @map("resource_id")
+  payload        Json
+  headersJson    Json?     @map("headers_json")
+  signatureOk    Boolean   @default(false) @map("signature_ok")
+  processed      Boolean   @default(false)
+  processedAt    DateTime? @map("processed_at")
+  error          String?   @db.Text
+  idempotencyKey String?   @unique @map("idempotency_key")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([processed])
+  @@map("webhooks_pix")
+}
+
+/// Fila processada pelo worker (rifa-worker)
+model WebhookInbox {
+  id             String             @id @default(cuid())
+  provider       PixProvider
+  idempotencyKey String?            @unique @map("idempotency_key")
+  topic          String?
+  resourceId     String?            @map("resource_id")
+  payload        Json
+  headersJson    Json?              @map("headers_json")
+  status         WebhookInboxStatus @default(PENDING)
+  attempts       Int                @default(0)
+  lastError      String?            @map("last_error") @db.Text
+  /// Próxima tentativa (backoff); nulo = elegível imediatamente
+  nextRetryAt    DateTime?          @map("next_retry_at")
+  createdAt      DateTime           @default(now()) @map("created_at")
+  processedAt    DateTime?          @map("processed_at")
+
+  @@index([status, nextRetryAt, createdAt])
+  @@map("webhook_inbox")
+}
+
+model IntegrationLog {
+  id        String   @id @default(cuid())
+  context   String
+  provider  String?
+  message   String   @db.Text
+  metadata  Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([context])
+  @@map("logs_integracao")
+}
+
+model WhatsAppMessage {
+  id                String               @id @default(cuid())
+  reservationId     String               @map("reserva_id")
+  participantId     String               @map("participante_id")
+  provider          WhatsAppProvider
+  telefone          String
+  tipoMensagem      WhatsAppMessageType  @map("tipo_mensagem")
+  conteudo          String               @db.Text
+  statusEnvio       WhatsAppSendStatus   @default(PENDING) @map("status_envio")
+  providerMessageId String?              @map("provider_message_id")
+  erro              String?              @db.Text
+  tentativas        Int                  @default(0)
+  /// Retry com backoff — só processar quando <= agora ou nulo
+  nextRetryAt       DateTime?            @map("next_retry_at")
+  sentAt            DateTime?            @map("sent_at")
+  createdAt         DateTime             @default(now()) @map("created_at")
+  updatedAt         DateTime             @updatedAt @map("updated_at")
+
+  reservation Reservation @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  participant Participant @relation(fields: [participantId], references: [id], onDelete: Cascade)
+
+  @@index([reservationId])
+  @@index([statusEnvio, nextRetryAt, createdAt])
+  @@map("whatsapp_messages")
+}

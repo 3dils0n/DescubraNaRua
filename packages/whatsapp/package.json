@@ -1,0 +1,14 @@
+{
+  "name": "@repo/whatsapp",
+  "version": "0.0.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@repo/db": "*",
+    "@repo/shared": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
