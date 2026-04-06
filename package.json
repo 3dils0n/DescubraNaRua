@@ -1,0 +1,27 @@
+{
+  "name": "descubra-na-rua",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "postinstall": "npm run db:generate",
+    "dev": "npm run dev --workspace=rifa-web",
+    "build": "npm run db:generate && npm run build --workspace=rifa-web",
+    "start": "npm run start --workspace=rifa-web",
+    "worker": "npm run start --workspace=rifa-worker",
+    "cron": "npm run start --workspace=rifa-cron",
+    "db:generate": "npm run db:generate --workspace=@repo/db",
+    "db:migrate": "npm run db:migrate --workspace=@repo/db",
+    "db:deploy": "npm run db:deploy --workspace=@repo/db",
+    "db:seed": "npm run db:seed --workspace=@repo/db",
+    "db:push": "npm run db:push --workspace=@repo/db",
+    "db:studio": "npm run db:studio --workspace=@repo/db",
+    "lint": "npm run lint --workspace=rifa-web"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}
