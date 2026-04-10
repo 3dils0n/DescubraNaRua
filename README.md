@@ -31,7 +31,7 @@ packages/whatsapp → provedores + fila + envio em lote
 
 ## Configuração local
 
-1. Copie `.env.example` para `.env` na raiz.
+1. Copie `.env.example` para `.env` na **raiz** do repositório (com `DATABASE_URL`). O `apps/web/next.config.ts` carrega esse `.env` com `dotenv` — não precisas duplicar o ficheiro dentro de `apps/web`.
 2. Suba o Postgres (`docker compose up -d`) ou use instância remota.
 3. `npm install`
 4. Primeira vez no banco: com `DATABASE_URL` definida, `npm run db:deploy` (aplica migrations). Em dev podes usar `npm run db:push` (sem ficheiros de migration). Se o banco **já existia** só com `db push`, vê **Baseline das migrations** antes de correr `db:deploy`.
@@ -40,16 +40,22 @@ packages/whatsapp → provedores + fila + envio em lote
 
 **Admin:** `http://localhost:3000/admin/login` — `admin@rifa.com` / `123456` (seed).
 
+### Testar no telemóvel (mesma Wi‑Fi)
+
+O `npm run dev` usa `-H 0.0.0.0` para o Next aceitar ligações na rede local. No PC, confirma o IPv4 com `ipconfig` (ex.: `192.168.20.14`) e no telemóvel abre `http://192.168.20.14:3000`. O `next.config.ts` define `allowedDevOrigins` (por defeito `192.168.20.14`; podes listar mais no `.env` com `NEXT_DEV_ALLOWED_ORIGINS=IP1,IP2`) para o aviso **Cross origin request** a `/_next/*` não aparecer e, em futuras versões do Next, o HMR continuar permitido. Se não abrir: no **Windows**, permite **Node.js** na firewall ou entrada TCP **3000**; o telemóvel tem de estar na **mesma Wi‑Fi** que o PC.
+
 ### Baseline das migrations
 
-- **Banco vazio:** a partir da pasta `packages/db`, com `DATABASE_URL` definida, rode `npx prisma migrate deploy` (ou na raiz `npm run db:deploy`). Isso aplica a migração `20260406150000_init` e regista o histórico em `_prisma_migrations`.
+O `.env` com `DATABASE_URL` fica na **raiz** do repositório. Os scripts `npm run db:*` carregam esse ficheiro automaticamente. Se correres `npx prisma …` **dentro de** `packages/db`, o Prisma não vê a raiz: usa `dotenv -e ../../.env --` antes do comando, ou prefere `npm run db:deploy` / `npm run db:migrate` a partir da raiz.
 
-- **Banco já criado antes com `db push` (sem migrations):** o esquema costuma coincidir com essa migração. **Não** corra `migrate deploy` se isso repetir `CREATE TABLE` e der erro de tabela já existente. Nesse caso, marque a migração como aplicada sem reexecutar o SQL:
+- **Banco vazio:** na raiz, `npm run db:deploy` (ou em `packages/db`: `npm run db:deploy`). Aplica `20260406150000_init` e regista em `_prisma_migrations`.
+
+- **Banco já criado antes com `db push` (sem migrations):** não corras `migrate deploy` se isso repetir `CREATE TABLE`. Marca a migração como aplicada sem reexecutar o SQL:
 
   ```bash
   cd packages/db
-  npx prisma migrate resolve --applied 20260406150000_init
-  npx prisma migrate status
+  npx dotenv -e ../../.env -- prisma migrate resolve --applied 20260406150000_init
+  npx dotenv -e ../../.env -- prisma migrate status
   ```
 
   Use `resolve` apenas se o schema no PostgreSQL for o mesmo que o `schema.prisma` atual (caso típico após `db push` alinhado ao repo).
@@ -64,5 +70,4 @@ O endpoint **não** confirma pagamento na mesma requisição: grava em `webhook_
 
 ## Logo
 
-Coloque `logo_rifa.jpeg` em `apps/web/public/logo_rifa.jpeg` (ou copie da raiz do projeto).
-"# DescubraNaRua" 
+Coloque `logo_rifa.png` em `apps/web/public/logo_rifa.png` (ou copie da raiz do projeto).
