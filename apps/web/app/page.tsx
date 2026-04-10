@@ -4,7 +4,7 @@ import { prisma } from "@repo/db";
 import { RaffleStatus } from "@prisma/client";
 import { GoldButton } from "@/components/gold-button";
 import { ProgressGold } from "@/components/progress-gold";
-import { SiteLogo } from "@/components/site-logo";
+import { SiteHeader } from "@/components/site-header";
 
 export const dynamic = "force-dynamic";
 
@@ -29,25 +29,7 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen">
-      <header className="sticky top-0 z-50 border-b border-white/5 bg-[#0A0A0A]/85 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-          <SiteLogo href="/" />
-          <nav className="flex items-center gap-6 text-sm text-[#BDBDBD]">
-            <Link href="/#rifas" className="hover:text-[#F2C94C]">
-              Rifas
-            </Link>
-            <Link href="/consulta" className="hover:text-[#F2C94C]">
-              Minha reserva
-            </Link>
-            <Link
-              href="/admin/login"
-              className="rounded-lg border border-[#D4AF37]/40 px-3 py-1.5 text-[#D4AF37] hover:bg-[#D4AF37]/10"
-            >
-              Admin
-            </Link>
-          </nav>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="relative overflow-hidden px-4 pb-20 pt-16 md:pt-24">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(212,175,55,0.15),transparent_50%)]" />

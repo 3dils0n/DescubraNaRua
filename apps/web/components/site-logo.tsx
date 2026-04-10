@@ -8,13 +8,13 @@ type Props = {
   className?: string;
 };
 
-export function SiteLogo({ href = "/", heightClass = "h-9 md:h-11", className = "" }: Props) {
+export function SiteLogo({ href = "/", heightClass = "h-[6.75rem] md:h-[8.25rem]", className = "" }: Props) {
   const img = (
     <Image
-      src="/logo_rifa.jpeg"
+      src="/logo_rifa.png"
       alt="Descubra na Rua"
-      width={220}
-      height={80}
+      width={660}
+      height={240}
       className={`w-auto object-contain object-left ${heightClass} ${className}`}
       priority
     />

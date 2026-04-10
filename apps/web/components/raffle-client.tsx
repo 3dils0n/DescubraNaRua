@@ -1,11 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { GoldButton } from "@/components/gold-button";
 import { ProgressGold } from "@/components/progress-gold";
-import { SiteLogo } from "@/components/site-logo";
+import { SiteHeader } from "@/components/site-header";
 
 type Raffle = {
   id: string;
@@ -128,20 +127,7 @@ export function RaffleClient({ initial }: { initial: Raffle }) {
 
   return (
     <main className="min-h-screen pb-28">
-      <header className="sticky top-0 z-40 border-b border-white/5 bg-[#0A0A0A]/90 backdrop-blur-md">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <div className="flex min-w-0 flex-1 items-center gap-4">
-            <SiteLogo href="/" heightClass="h-8 md:h-9" />
-            <Link
-              href="/"
-              className="hidden shrink-0 text-xs font-medium tracking-wider text-[#BDBDBD] hover:text-[#F2C94C] sm:inline"
-            >
-              ← Início
-            </Link>
-          </div>
-          <span className="text-xs text-[#BDBDBD]">Pix · automático</span>
-        </div>
-      </header>
+      <SiteHeader />
 
       <section className="relative">
         <div className="relative aspect-[21/9] max-h-[320px] w-full bg-gradient-to-br from-[#2a2410] to-[#0a0a0a]">

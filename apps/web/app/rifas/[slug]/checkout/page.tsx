@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GoldButton } from "@/components/gold-button";
+import { SiteHeader } from "@/components/site-header";
 
 type Payload = {
   raffleSlug: string;
@@ -118,8 +119,10 @@ export default function CheckoutPage() {
 
   if (pix) {
     return (
-      <main className="min-h-screen px-4 py-12">
-        <div className="mx-auto max-w-lg space-y-6 text-center">
+      <>
+        <SiteHeader />
+        <main className="min-h-screen px-4 py-12">
+          <div className="mx-auto max-w-lg space-y-6 text-center">
           <h1 className="font-display text-3xl text-[#F2C94C]">Pague com Pix</h1>
           <p className="text-sm text-[#BDBDBD]">Código da reserva: {pix.codigo}</p>
           {pix.qrCodeBase64 ? (
@@ -148,14 +151,17 @@ export default function CheckoutPage() {
           <Link href="/" className="block text-sm text-[#D4AF37]">
             Voltar ao início
           </Link>
-        </div>
-      </main>
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="min-h-screen px-4 py-12">
-      <div className="mx-auto max-w-md space-y-6 rounded-3xl border border-[#D4AF37]/25 bg-[#101010] p-8">
+    <>
+      <SiteHeader />
+      <main className="min-h-screen px-4 py-12">
+        <div className="mx-auto max-w-md space-y-6 rounded-3xl border border-[#D4AF37]/25 bg-[#101010] p-8">
         <h1 className="font-display text-2xl text-[#F5F5F5]">Seus dados</h1>
         {!payload && <p className="text-sm text-[#EF4444]">Carregando seleção…</p>}
         <label className="block text-left text-sm text-[#BDBDBD]">
@@ -202,7 +208,8 @@ export default function CheckoutPage() {
         <Link href={`/rifas/${slug}`} className="block text-center text-sm text-[#D4AF37]">
           Voltar
         </Link>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }

@@ -3,7 +3,6 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { GoldButton } from "@/components/gold-button";
-import { SiteLogo } from "@/components/site-logo";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -28,8 +27,7 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-[#0A0A0A] px-4 py-10">
-      <SiteLogo href="/" heightClass="h-12 md:h-14" className="opacity-95" />
+    <main className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-10">
       <form
         onSubmit={submit}
         className="w-full max-w-md space-y-6 rounded-3xl border border-[#D4AF37]/30 bg-[#101010] p-10"

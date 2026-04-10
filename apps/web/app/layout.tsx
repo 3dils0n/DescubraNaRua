@@ -9,8 +9,8 @@ export const metadata: Metadata = {
   title: "Descubra na Rua — Rifas premium",
   description: "Participe com Pix. Confirmação automática. Transparência total.",
   icons: {
-    icon: "/logo_rifa.jpeg",
-    apple: "/logo_rifa.jpeg",
+    icon: "/logo_rifa.png",
+    apple: "/logo_rifa.png",
   },
 };
 
