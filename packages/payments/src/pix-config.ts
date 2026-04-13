@@ -1,5 +1,5 @@
 import { prisma } from "@repo/db";
-import { PixProvider as PixProviderEnum } from "@prisma/client";
+import { PixProvider as PixProviderEnum, type AppSettings } from "@prisma/client";
 import { getEnv } from "@repo/shared";
 
 export type EffectivePixProvider = "mock" | "mercadopago";
@@ -15,7 +15,13 @@ export type EffectivePixConfig = {
  * `pix_provider_override` null = usar PIX_PROVIDER do ambiente.
  */
 export async function getEffectivePixConfig(): Promise<EffectivePixConfig> {
-  const row = await prisma.appSettings.findUnique({ where: { id: "default" } });
+  let row: AppSettings | null = null;
+  try {
+    row = await prisma.appSettings.findUnique({ where: { id: "default" } });
+  } catch {
+    // Tabela `app_settings` ausente ou erro de BD — comportamento igual a sem linha (só .env)
+    row = null;
+  }
   const env = getEnv();
   const envProv: EffectivePixProvider = env.PIX_PROVIDER === "mercadopago" ? "mercadopago" : "mock";
 
