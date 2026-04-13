@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@repo/db";
+import { isSyntheticCheckoutEmail } from "@repo/shared";
 
 type Params = { params: Promise<{ codigo: string }> };
 
@@ -28,7 +29,9 @@ export async function GET(_req: Request, ctx: Params) {
     participant: {
       nome: res.participant.nome,
       telefone: res.participant.telefone,
-      email: res.participant.email,
+      ...(isSyntheticCheckoutEmail(res.participant.email)
+        ? {}
+        : { email: res.participant.email }),
     },
     numbers: res.numbers.map((n) => n.raffleNumber.numero).sort(),
     pix: pix

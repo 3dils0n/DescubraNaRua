@@ -29,6 +29,14 @@ type Cfg = {
     mercadoPagoWebhookSecretConfigured: boolean;
     legacyMpAccessTokenAlias: boolean;
     legacyMpWebhookSecretAlias: boolean;
+    effectiveProvider: string;
+    effectiveAccessTokenConfigured: boolean;
+    effectiveWebhookSecretConfigured: boolean;
+    database: {
+      pixProviderOverride: "MERCADOPAGO" | "MOCK" | null;
+      hasAccessTokenInDatabase: boolean;
+      hasWebhookSecretInDatabase: boolean;
+    };
   };
   whatsapp: {
     tokenConfigured: boolean;
@@ -175,9 +183,217 @@ function AdminChangePasswordSection() {
   );
 }
 
+function pixModeFromCfg(c: Cfg): "inherit" | "mock" | "mercadopago" {
+  const o = c.pix.database.pixProviderOverride;
+  if (o === null) return "inherit";
+  return o === "MERCADOPAGO" ? "mercadopago" : "mock";
+}
+
+function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
+  const [pixProviderMode, setPixProviderMode] = useState<"inherit" | "mock" | "mercadopago">(() =>
+    pixModeFromCfg(c),
+  );
+  const [accessToken, setAccessToken] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [accessTouched, setAccessTouched] = useState(false);
+  const [webhookTouched, setWebhookTouched] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [clearing, setClearing] = useState<"access" | "webhook" | null>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPixProviderMode(pixModeFromCfg(c));
+    setAccessToken("");
+    setWebhookSecret("");
+    setAccessTouched(false);
+    setWebhookTouched(false);
+  }, [c]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setMsg(null);
+    setErr(null);
+    setLoading(true);
+    try {
+      const body: Record<string, unknown> = { pixProviderMode };
+      if (accessTouched) body.mercadoPagoAccessToken = accessToken;
+      if (webhookTouched) body.mercadoPagoWebhookSecret = webhookSecret;
+      await adminFetch("/api/admin/config/pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      setMsg("Configuração Pix guardada.");
+      setAccessToken("");
+      setWebhookSecret("");
+      setAccessTouched(false);
+      setWebhookTouched(false);
+      onSaved();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Erro ao guardar.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const busy = loading || clearing !== null;
+
+  async function clearPanelToken(which: "access" | "webhook") {
+    setMsg(null);
+    setErr(null);
+    setClearing(which);
+    try {
+      await adminFetch("/api/admin/config/pix", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          pixProviderMode,
+          ...(which === "access" ? { clearMercadoPagoAccessToken: true } : { clearMercadoPagoWebhookSecret: true }),
+        }),
+      });
+      setMsg(
+        which === "access"
+          ? "Access token removido do painel. Passa a usar o .env (se existir)."
+          : "Segredo do webhook removido do painel. Passa a usar o .env (se existir).",
+      );
+      setAccessToken("");
+      setWebhookSecret("");
+      setAccessTouched(false);
+      setWebhookTouched(false);
+      onSaved();
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Erro ao remover.");
+    } finally {
+      setClearing(null);
+    }
+  }
+
+  return (
+    <div className={adminCard}>
+      <h3 className="text-sm font-semibold text-[#D4AF37]">Pix (Mercado Pago) — configurar no painel</h3>
+      <p className="mt-1 text-xs text-[#666]">
+        Podes definir o modo Pix e os segredos aqui (gravados na base de dados). Se um campo estiver vazio ao guardar
+        (após editares esse campo), o valor no painel é removido e volta a usar o <code className="text-[#888]">.env</code>.
+        Também podes usar os botões &quot;Remover… do painel&quot; abaixo sem editar o campo. Provider efetivo agora:{" "}
+        <span className="font-mono text-[#D4AF37]">{c.pix.effectiveProvider}</span>
+      </p>
+
+      <form onSubmit={(e) => void submit(e)} className="mt-4 max-w-xl space-y-4">
+        <label className={adminLabel}>
+          Modo Pix
+          <select
+            className={adminInput}
+            value={pixProviderMode}
+            onChange={(e) => setPixProviderMode(e.target.value as "inherit" | "mock" | "mercadopago")}
+          >
+            <option value="inherit">Herdar do .env (PIX_PROVIDER)</option>
+            <option value="mock">Mock (testes)</option>
+            <option value="mercadopago">Mercado Pago</option>
+          </select>
+        </label>
+
+        <label className={adminLabel}>
+          Access Token (Mercado Pago)
+          <input
+            type="password"
+            autoComplete="off"
+            className={adminInput}
+            value={accessToken}
+            placeholder={
+              c.pix.database.hasAccessTokenInDatabase
+                ? "•••• definido no painel — escreve para substituir"
+                : "Opcional — ou usa MERCADO_PAGO_ACCESS_TOKEN no .env"
+            }
+            onChange={(e) => {
+              setAccessToken(e.target.value);
+              setAccessTouched(true);
+            }}
+          />
+          {c.pix.database.hasAccessTokenInDatabase && (
+            <div className="mt-2">
+              <button
+                type="button"
+                className={adminBtnSecondary}
+                disabled={busy}
+                onClick={() => void clearPanelToken("access")}
+              >
+                {clearing === "access" ? "A remover…" : "Remover access token do painel"}
+              </button>
+            </div>
+          )}
+        </label>
+
+        <label className={adminLabel}>
+          Segredo do webhook (Mercado Pago)
+          <input
+            type="password"
+            autoComplete="off"
+            className={adminInput}
+            value={webhookSecret}
+            placeholder={
+              c.pix.database.hasWebhookSecretInDatabase
+                ? "•••• definido no painel — escreve para substituir"
+                : "Opcional — ou usa MERCADO_PAGO_WEBHOOK_SECRET no .env"
+            }
+            onChange={(e) => {
+              setWebhookSecret(e.target.value);
+              setWebhookTouched(true);
+            }}
+          />
+          {c.pix.database.hasWebhookSecretInDatabase && (
+            <div className="mt-2">
+              <button
+                type="button"
+                className={adminBtnSecondary}
+                disabled={busy}
+                onClick={() => void clearPanelToken("webhook")}
+              >
+                {clearing === "webhook" ? "A remover…" : "Remover segredo do webhook do painel"}
+              </button>
+            </div>
+          )}
+        </label>
+
+        <p className="text-xs text-[#666]">
+          Tokens no painel: access{" "}
+          <Badge ok={c.pix.database.hasAccessTokenInDatabase} label={c.pix.database.hasAccessTokenInDatabase ? "Sim" : "Não"} /> ·
+          webhook{" "}
+          <Badge ok={c.pix.database.hasWebhookSecretInDatabase} label={c.pix.database.hasWebhookSecretInDatabase ? "Sim" : "Não"} />
+        </p>
+
+        {err && <p className="text-sm text-red-400">{err}</p>}
+        {msg && <p className="text-sm text-emerald-400">{msg}</p>}
+
+        <div className="flex flex-wrap gap-3">
+          <GoldButton type="submit" disabled={busy}>
+            {loading ? "A guardar…" : "Guardar Pix"}
+          </GoldButton>
+        </div>
+      </form>
+
+      <div className="mt-6 border-t border-white/10 pt-4">
+        <p className="text-xs font-medium text-[#888]">Estado combinado (BD + .env)</p>
+        <div className="mt-2">
+          <Row name="Provider efetivo">
+            <span className="font-mono text-sm">{c.pix.effectiveProvider}</span>
+          </Row>
+          <Row name="Access token disponível">
+            <Badge ok={c.pix.effectiveAccessTokenConfigured} label={c.pix.effectiveAccessTokenConfigured ? "Sim" : "Não"} />
+          </Row>
+          <Row name="Webhook secret disponível">
+            <Badge ok={c.pix.effectiveWebhookSecretConfigured} label={c.pix.effectiveWebhookSecretConfigured ? "Sim" : "Não"} />
+          </Row>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdminConfiguracoesPage() {
   const [c, setC] = useState<Cfg | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [configTick, setConfigTick] = useState(0);
 
   useEffect(() => {
     void (async () => {
@@ -188,7 +404,7 @@ export default function AdminConfiguracoesPage() {
         setErr(e instanceof Error ? e.message : "Erro");
       }
     })();
-  }, []);
+  }, [configTick]);
 
   return (
     <div>
@@ -199,6 +415,14 @@ export default function AdminConfiguracoesPage() {
       />
       <AdminChangePasswordSection />
       {err && <p className="text-red-400">{err}</p>}
+      {c && (
+        <AdminPixSection
+          c={c}
+          onSaved={() => {
+            setConfigTick((t) => t + 1);
+          }}
+        />
+      )}
       {!c ? (
         <p className="text-[#888]">Carregando variáveis de ambiente…</p>
       ) : (
@@ -251,7 +475,8 @@ export default function AdminConfiguracoesPage() {
           </div>
 
           <div className={adminCard}>
-            <h3 className="text-sm font-semibold text-[#D4AF37]">Pix (Mercado Pago)</h3>
+            <h3 className="text-sm font-semibold text-[#D4AF37]">Pix — variáveis no .env (referência)</h3>
+            <p className="mt-1 text-xs text-[#666]">Usadas quando o modo é &quot;Herdar&quot; ou para preencher o que não está no painel.</p>
             <div className="mt-2">
               <Row name="PIX_PROVIDER">
                 <span className="rounded border border-white/10 px-2 py-0.5 font-mono text-sm">{c.pixProvider}</span>

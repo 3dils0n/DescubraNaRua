@@ -11,7 +11,7 @@ import { PixProvider, WebhookInboxStatus } from "@prisma/client";
 export async function POST(req: Request) {
   const raw = await req.text();
 
-  const sig = verifyMercadoPagoWebhookSignature(raw, req.headers);
+  const sig = await verifyMercadoPagoWebhookSignature(raw, req.headers);
   if (!sig.ok) {
     log.warn("webhook rejeitado (assinatura ou payload)", { erro: sig.reason });
     return NextResponse.json({ ok: false, reason: sig.reason }, { status: 401 });

@@ -23,6 +23,7 @@ export function SucessoInner() {
     raffle?: { titulo: string };
     numbers?: string[];
     valorTotal?: number;
+    participant?: { nome: string; telefone: string; email?: string };
   } | null;
 
   return (
@@ -32,6 +33,21 @@ export function SucessoInner() {
         <div className="max-w-lg rounded-3xl border border-[#22C55E]/40 bg-[#101010] p-10">
           <p className="text-sm font-semibold uppercase tracking-widest text-[#22C55E]">Pagamento confirmado</p>
           <h1 className="mt-4 font-display text-3xl text-[#F5F5F5]">Você está dentro!</h1>
+          {d?.participant && (
+            <div className="mt-4 space-y-1 text-sm text-[#BDBDBD]">
+              <p>
+                Nome: <strong className="text-[#F5F5F5]">{d.participant.nome}</strong>
+              </p>
+              <p>
+                WhatsApp: <strong className="text-[#F5F5F5]">{d.participant.telefone}</strong>
+              </p>
+              {d.participant.email && (
+                <p>
+                  E-mail: <span className="text-[#E0E0E0]">{d.participant.email}</span>
+                </p>
+              )}
+            </div>
+          )}
           {d?.raffle && (
             <p className="mt-4 text-[#BDBDBD]">
               Rifa: <strong className="text-[#F2C94C]">{d.raffle.titulo}</strong>

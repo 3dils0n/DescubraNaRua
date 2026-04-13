@@ -40,7 +40,10 @@ export function ConsultaInner() {
       <main className="min-h-screen px-4 pb-16 pt-8">
         <div className="mx-auto max-w-lg space-y-6">
           <h1 className="font-display text-3xl text-[#F2C94C]">Consultar reserva</h1>
-          <p className="text-sm text-[#BDBDBD]">Informe o código, telefone ou email usados na compra.</p>
+          <p className="text-sm text-[#BDBDBD]">
+            Informe o <strong className="text-[#E0E0E0]">código da reserva</strong> ou o <strong className="text-[#E0E0E0]">WhatsApp</strong> usado na
+            compra. Se na compra pediste e-mail, podes usar também abaixo.
+          </p>
           <input
             placeholder="Código"
             className="w-full rounded-xl border border-white/10 bg-[#101010] px-4 py-3 text-[#F5F5F5]"
@@ -55,7 +58,7 @@ export function ConsultaInner() {
           />
           <input
             type="email"
-            placeholder="Email"
+            placeholder="E-mail (só se pediste na compra)"
             className="w-full rounded-xl border border-white/10 bg-[#101010] px-4 py-3 text-[#F5F5F5]"
             value={email}
             onChange={(e) => setEmail(e.target.value)}

@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
+import { prisma } from "@repo/db";
 import { requireAdmin } from "@/lib/admin-api";
+import { getEffectivePixConfig } from "@repo/payments";
 import {
   getDefaultReservationExpirationMinutes,
   getRankingCacheTtlSeconds,
@@ -21,6 +23,9 @@ export async function GET() {
     process.env.MERCADO_PAGO_ACCESS_TOKEN?.trim() || process.env.MP_ACCESS_TOKEN?.trim() || "";
   const mpWh =
     process.env.MERCADO_PAGO_WEBHOOK_SECRET?.trim() || process.env.MP_WEBHOOK_SECRET?.trim() || "";
+
+  const appRow = await prisma.appSettings.findUnique({ where: { id: "default" } });
+  const effectivePix = await getEffectivePixConfig();
 
   return NextResponse.json({
     pixProvider: process.env.PIX_PROVIDER ?? "mock",
@@ -47,6 +52,14 @@ export async function GET() {
       mercadoPagoWebhookSecretConfigured: mpWh.length > 0,
       legacyMpAccessTokenAlias: set(process.env.MP_ACCESS_TOKEN) && !set(process.env.MERCADO_PAGO_ACCESS_TOKEN),
       legacyMpWebhookSecretAlias: set(process.env.MP_WEBHOOK_SECRET) && !set(process.env.MERCADO_PAGO_WEBHOOK_SECRET),
+      effectiveProvider: effectivePix.pixProvider,
+      effectiveAccessTokenConfigured: Boolean(effectivePix.accessToken?.trim()),
+      effectiveWebhookSecretConfigured: Boolean(effectivePix.webhookSecret?.trim()),
+      database: {
+        pixProviderOverride: appRow?.pixProviderOverride ?? null,
+        hasAccessTokenInDatabase: Boolean(appRow?.mercadoPagoAccessToken?.trim()),
+        hasWebhookSecretInDatabase: Boolean(appRow?.mercadoPagoWebhookSecret?.trim()),
+      },
     },
     whatsapp: {
       tokenConfigured: set(process.env.WHATSAPP_TOKEN),
