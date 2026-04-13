@@ -15,12 +15,22 @@ const checkoutSchema = z.object({
   raffleSlug: z.string().min(1),
   nome: z.string().min(2).max(120),
   telefone: z.string().min(10).max(20),
-  email: z.string().email(),
+  email: z.string().optional(),
   cpf: z.string().optional(),
   aceitouTermos: z.literal(true),
   quantity: z.number().int().positive().optional(),
   numberIds: z.array(z.string()).optional(),
 });
+
+function isValidEmail(s: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+
+/** E-mail técnico para o gateway Pix quando o comprador não informa e-mail (rifa sem pedido de e-mail). */
+export function syntheticEmailForPix(telefone: string): string {
+  const d = telefone.replace(/\D/g, "") || "0";
+  return `cliente+${d}@sem-email.rifa`;
+}
 
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
 
@@ -98,6 +108,20 @@ export async function createReservationWithPix(input: CheckoutInput) {
     }
   }
 
+  const emailTrim = (data.email ?? "").trim();
+  if (emailTrim && !isValidEmail(emailTrim)) {
+    throw new Error("EMAIL_INVALIDO");
+  }
+  if (raffle.checkoutPedirEmail && !emailTrim) {
+    throw new Error("EMAIL_OBRIGATORIO");
+  }
+  const cpfDigits = data.cpf?.replace(/\D/g, "") ?? "";
+  if (raffle.checkoutPedirCpf && cpfDigits.length !== 11) {
+    throw new Error("CPF_OBRIGATORIO");
+  }
+
+  const effectiveEmail = emailTrim || syntheticEmailForPix(data.telefone);
+
   const valorUnit = Number(raffle.valorNumero);
   const valorTotal = valorUnit * quantity;
   const expiresAt = new Date(Date.now() + raffle.reservaExpiraMinutos * 60 * 1000);
@@ -132,8 +156,8 @@ export async function createReservationWithPix(input: CheckoutInput) {
       data: {
         nome: data.nome,
         telefone: data.telefone,
-        email: data.email,
-        cpf: data.cpf?.replace(/\D/g, "") || null,
+        email: effectiveEmail,
+        cpf: cpfDigits || null,
         aceitouTermos: true,
       },
     });
@@ -157,10 +181,10 @@ export async function createReservationWithPix(input: CheckoutInput) {
       amount: valorTotal,
       description: `${raffle.titulo} — ${quantity} números`,
       externalReference: externalRef,
-      payerEmail: data.email,
+      payerEmail: effectiveEmail,
       payerFirstName: firstName,
       payerLastName: lastName,
-      payerCpf: data.cpf,
+      payerCpf: cpfDigits ? data.cpf : undefined,
       notificationUrl,
       idempotencyKey: reservation.id,
     });

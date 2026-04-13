@@ -108,6 +108,10 @@ model Raffle {
   ativarContadorTempoReal  Boolean             @default(true) @map("ativar_contador_tempo_real")
   ativarWhatsapp           Boolean             @default(true) @map("ativar_whatsapp")
   mensagemWhatsappPadrao   String?             @map("mensagem_whatsapp_padrao") @db.Text
+  /// Se true, o checkout pede e-mail; se false, gera e-mail técnico para o gateway Pix.
+  checkoutPedirEmail       Boolean             @default(false) @map("checkout_pedir_email")
+  /// Se true, o checkout pede CPF (útil para Pix no Mercado Pago).
+  checkoutPedirCpf         Boolean             @default(false) @map("checkout_pedir_cpf")
   status                   RaffleStatus        @default(DRAFT)
   numeroVencedorId         String?             @unique @map("numero_vencedor_id")
   sorteadoEm               DateTime?           @map("sorteado_em")
