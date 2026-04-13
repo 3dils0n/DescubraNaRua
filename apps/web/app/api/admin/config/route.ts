@@ -24,7 +24,14 @@ export async function GET() {
   const mpWh =
     process.env.MERCADO_PAGO_WEBHOOK_SECRET?.trim() || process.env.MP_WEBHOOK_SECRET?.trim() || "";
 
-  const appRow = await prisma.appSettings.findUnique({ where: { id: "default" } });
+  let appRow: Awaited<ReturnType<typeof prisma.appSettings.findUnique>> = null;
+  let settingsTableAvailable = true;
+  try {
+    appRow = await prisma.appSettings.findUnique({ where: { id: "default" } });
+  } catch {
+    appRow = null;
+    settingsTableAvailable = false;
+  }
   const effectivePix = await getEffectivePixConfig();
 
   return NextResponse.json({
@@ -55,6 +62,8 @@ export async function GET() {
       effectiveProvider: effectivePix.pixProvider,
       effectiveAccessTokenConfigured: Boolean(effectivePix.accessToken?.trim()),
       effectiveWebhookSecretConfigured: Boolean(effectivePix.webhookSecret?.trim()),
+      /** false se a tabela `app_settings` não existir (migração em falta) */
+      settingsTableAvailable,
       database: {
         pixProviderOverride: appRow?.pixProviderOverride ?? null,
         hasAccessTokenInDatabase: Boolean(appRow?.mercadoPagoAccessToken?.trim()),

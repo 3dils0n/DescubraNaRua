@@ -32,6 +32,8 @@ type Cfg = {
     effectiveProvider: string;
     effectiveAccessTokenConfigured: boolean;
     effectiveWebhookSecretConfigured: boolean;
+    /** false = tabela app_settings em falta; formulário no painel desativado */
+    settingsTableAvailable?: boolean;
     database: {
       pixProviderOverride: "MERCADOPAGO" | "MOCK" | null;
       hasAccessTokenInDatabase: boolean;
@@ -184,7 +186,7 @@ function AdminChangePasswordSection() {
 }
 
 function pixModeFromCfg(c: Cfg): "inherit" | "mock" | "mercadopago" {
-  const o = c.pix.database.pixProviderOverride;
+  const o = c.pix.database?.pixProviderOverride ?? null;
   if (o === null) return "inherit";
   return o === "MERCADOPAGO" ? "mercadopago" : "mock";
 }
@@ -238,6 +240,7 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
   }
 
   const busy = loading || clearing !== null;
+  const tableOk = c.pix.settingsTableAvailable !== false;
 
   async function clearPanelToken(which: "access" | "webhook") {
     setMsg(null);
@@ -270,13 +273,23 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
   }
 
   return (
-    <div className={adminCard}>
-      <h3 className="text-sm font-semibold text-[#D4AF37]">Pix (Mercado Pago) — configurar no painel</h3>
-      <p className="mt-1 text-xs text-[#666]">
-        Podes definir o modo Pix e os segredos aqui (gravados na base de dados). Se um campo estiver vazio ao guardar
-        (após editares esse campo), o valor no painel é removido e volta a usar o <code className="text-[#888]">.env</code>.
-        Também podes usar os botões &quot;Remover… do painel&quot; abaixo sem editar o campo. Provider efetivo agora:{" "}
-        <span className="font-mono text-[#D4AF37]">{c.pix.effectiveProvider}</span>
+    <div id="admin-pix-config" className={`${adminCard} mb-8 ring-1 ring-[#D4AF37]/25`}>
+      <h3 className="text-base font-semibold text-[#D4AF37]">Configurar Pix (Mercado Pago)</h3>
+      <p className="mt-1 text-xs text-[#888]">
+        Aqui defines o modo (mock / Mercado Pago) e os tokens guardados na base. Provider efetivo:{" "}
+        <span className="font-mono text-[#D4AF37]">{c.pix.effectiveProvider ?? "—"}</span>
+      </p>
+      {!tableOk && (
+        <div className="mt-3 rounded border border-amber-500/35 bg-amber-500/10 p-3 text-sm text-amber-100">
+          A tabela <code className="text-amber-200/90">app_settings</code> não existe nesta base de dados. Corre as
+          migrações Prisma (ex.: <code className="text-amber-200/90">npx prisma migrate deploy</code> em{" "}
+          <code className="text-amber-200/90">packages/db</code>) e recarrega. Até lá, o Pix usa só o{" "}
+          <code className="text-amber-200/90">.env</code> no servidor.
+        </div>
+      )}
+      <p className="mt-2 text-xs text-[#666]">
+        Valores vazios ao guardar (depois de editares o campo) removem o segredo do painel e voltam ao{" "}
+        <code className="text-[#888]">.env</code>. Usa &quot;Remover… do painel&quot; para apagar sem editar o campo.
       </p>
 
       <form onSubmit={(e) => void submit(e)} className="mt-4 max-w-xl space-y-4">
@@ -285,6 +298,7 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
           <select
             className={adminInput}
             value={pixProviderMode}
+            disabled={!tableOk}
             onChange={(e) => setPixProviderMode(e.target.value as "inherit" | "mock" | "mercadopago")}
           >
             <option value="inherit">Herdar do .env (PIX_PROVIDER)</option>
@@ -300,8 +314,9 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
             autoComplete="off"
             className={adminInput}
             value={accessToken}
+            disabled={!tableOk}
             placeholder={
-              c.pix.database.hasAccessTokenInDatabase
+              c.pix.database?.hasAccessTokenInDatabase
                 ? "•••• definido no painel — escreve para substituir"
                 : "Opcional — ou usa MERCADO_PAGO_ACCESS_TOKEN no .env"
             }
@@ -310,12 +325,12 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
               setAccessTouched(true);
             }}
           />
-          {c.pix.database.hasAccessTokenInDatabase && (
+          {c.pix.database?.hasAccessTokenInDatabase && (
             <div className="mt-2">
               <button
                 type="button"
                 className={adminBtnSecondary}
-                disabled={busy}
+                disabled={busy || !tableOk}
                 onClick={() => void clearPanelToken("access")}
               >
                 {clearing === "access" ? "A remover…" : "Remover access token do painel"}
@@ -331,8 +346,9 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
             autoComplete="off"
             className={adminInput}
             value={webhookSecret}
+            disabled={!tableOk}
             placeholder={
-              c.pix.database.hasWebhookSecretInDatabase
+              c.pix.database?.hasWebhookSecretInDatabase
                 ? "•••• definido no painel — escreve para substituir"
                 : "Opcional — ou usa MERCADO_PAGO_WEBHOOK_SECRET no .env"
             }
@@ -341,12 +357,12 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
               setWebhookTouched(true);
             }}
           />
-          {c.pix.database.hasWebhookSecretInDatabase && (
+          {c.pix.database?.hasWebhookSecretInDatabase && (
             <div className="mt-2">
               <button
                 type="button"
                 className={adminBtnSecondary}
-                disabled={busy}
+                disabled={busy || !tableOk}
                 onClick={() => void clearPanelToken("webhook")}
               >
                 {clearing === "webhook" ? "A remover…" : "Remover segredo do webhook do painel"}
@@ -357,23 +373,23 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
 
         <p className="text-xs text-[#666]">
           Tokens no painel: access{" "}
-          <Badge ok={c.pix.database.hasAccessTokenInDatabase} label={c.pix.database.hasAccessTokenInDatabase ? "Sim" : "Não"} /> ·
+          <Badge ok={Boolean(c.pix.database?.hasAccessTokenInDatabase)} label={c.pix.database?.hasAccessTokenInDatabase ? "Sim" : "Não"} /> ·
           webhook{" "}
-          <Badge ok={c.pix.database.hasWebhookSecretInDatabase} label={c.pix.database.hasWebhookSecretInDatabase ? "Sim" : "Não"} />
+          <Badge ok={Boolean(c.pix.database?.hasWebhookSecretInDatabase)} label={c.pix.database?.hasWebhookSecretInDatabase ? "Sim" : "Não"} />
         </p>
 
         {err && <p className="text-sm text-red-400">{err}</p>}
         {msg && <p className="text-sm text-emerald-400">{msg}</p>}
 
         <div className="flex flex-wrap gap-3">
-          <GoldButton type="submit" disabled={busy}>
+          <GoldButton type="submit" disabled={busy || !tableOk}>
             {loading ? "A guardar…" : "Guardar Pix"}
           </GoldButton>
         </div>
       </form>
 
       <div className="mt-6 border-t border-white/10 pt-4">
-        <p className="text-xs font-medium text-[#888]">Estado combinado (BD + .env)</p>
+        <p className="text-xs font-medium text-[#888]">Estado efetivo (base + .env)</p>
         <div className="mt-2">
           <Row name="Provider efetivo">
             <span className="font-mono text-sm">{c.pix.effectiveProvider}</span>
@@ -383,6 +399,38 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
           </Row>
           <Row name="Webhook secret disponível">
             <Badge ok={c.pix.effectiveWebhookSecretConfigured} label={c.pix.effectiveWebhookSecretConfigured ? "Sim" : "Não"} />
+          </Row>
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-white/10 pt-4">
+        <p className="text-xs font-medium text-[#888]">Variáveis no servidor (.env) — só leitura</p>
+        <p className="mt-1 text-xs text-[#666]">Usadas no modo &quot;Herdar&quot; ou quando o campo não está preenchido no painel.</p>
+        <div className="mt-2">
+          <Row name="PIX_PROVIDER">
+            <span className="rounded border border-white/10 px-2 py-0.5 font-mono text-sm">{c.pixProvider}</span>
+          </Row>
+          <Row name="MERCADO_PAGO_ACCESS_TOKEN">
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <Badge
+                ok={c.pix.mercadoPagoAccessTokenConfigured}
+                label={c.pix.mercadoPagoAccessTokenConfigured ? "Definido" : "Vazio"}
+              />
+              {c.pix.legacyMpAccessTokenAlias && (
+                <span className="text-xs text-[#888]">(via MP_ACCESS_TOKEN)</span>
+              )}
+            </span>
+          </Row>
+          <Row name="MERCADO_PAGO_WEBHOOK_SECRET">
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <Badge
+                ok={c.pix.mercadoPagoWebhookSecretConfigured}
+                label={c.pix.mercadoPagoWebhookSecretConfigured ? "Definido" : "Vazio"}
+              />
+              {c.pix.legacyMpWebhookSecretAlias && (
+                <span className="text-xs text-[#888]">(via MP_WEBHOOK_SECRET)</span>
+              )}
+            </span>
           </Row>
         </div>
       </div>
@@ -410,10 +458,9 @@ export default function AdminConfiguracoesPage() {
     <div>
       <AdminPageHeader
         title="Configurações"
-        subtitle="Leitura do ambiente em tempo de execução (mesmo bloco do .env). Valores secretos não são exibidos — só se estão definidos."
+        subtitle="O bloco no topo permite configurar o Pix na base de dados. Abaixo: conta, URLs e outras variáveis de ambiente (só leitura)."
         breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Configurações" }]}
       />
-      <AdminChangePasswordSection />
       {err && <p className="text-red-400">{err}</p>}
       {c && (
         <AdminPixSection
@@ -423,6 +470,7 @@ export default function AdminConfiguracoesPage() {
           }}
         />
       )}
+      <AdminChangePasswordSection />
       {!c ? (
         <p className="text-[#888]">Carregando variáveis de ambiente…</p>
       ) : (
@@ -470,38 +518,6 @@ export default function AdminConfiguracoesPage() {
               </Row>
               <Row name="CRON_SECRET">
                 <Badge ok={c.internal.cronSecretConfigured} label={c.internal.cronSecretConfigured ? "Definido" : "Vazio"} />
-              </Row>
-            </div>
-          </div>
-
-          <div className={adminCard}>
-            <h3 className="text-sm font-semibold text-[#D4AF37]">Pix — variáveis no .env (referência)</h3>
-            <p className="mt-1 text-xs text-[#666]">Usadas quando o modo é &quot;Herdar&quot; ou para preencher o que não está no painel.</p>
-            <div className="mt-2">
-              <Row name="PIX_PROVIDER">
-                <span className="rounded border border-white/10 px-2 py-0.5 font-mono text-sm">{c.pixProvider}</span>
-              </Row>
-              <Row name="MERCADO_PAGO_ACCESS_TOKEN">
-                <span className="inline-flex flex-wrap items-center gap-2">
-                  <Badge
-                    ok={c.pix.mercadoPagoAccessTokenConfigured}
-                    label={c.pix.mercadoPagoAccessTokenConfigured ? "Definido" : "Vazio"}
-                  />
-                  {c.pix.legacyMpAccessTokenAlias && (
-                    <span className="text-xs text-[#888]">(via MP_ACCESS_TOKEN)</span>
-                  )}
-                </span>
-              </Row>
-              <Row name="MERCADO_PAGO_WEBHOOK_SECRET">
-                <span className="inline-flex flex-wrap items-center gap-2">
-                  <Badge
-                    ok={c.pix.mercadoPagoWebhookSecretConfigured}
-                    label={c.pix.mercadoPagoWebhookSecretConfigured ? "Definido" : "Vazio"}
-                  />
-                  {c.pix.legacyMpWebhookSecretAlias && (
-                    <span className="text-xs text-[#888]">(via MP_WEBHOOK_SECRET)</span>
-                  )}
-                </span>
               </Row>
             </div>
           </div>
