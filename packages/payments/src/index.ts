@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./pix-config";
 export * from "./factory";
 export * from "./confirm-payment";
 export * from "./reservation.service";

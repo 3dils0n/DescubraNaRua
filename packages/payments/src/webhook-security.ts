@@ -1,16 +1,16 @@
 import crypto from "crypto";
-import { getMercadoPagoWebhookSecret } from "@repo/shared";
+import { getEffectiveMercadoPagoWebhookSecret } from "./pix-config";
 
 /**
  * Valida assinatura Mercado Pago (x-signature + x-request-id).
- * Se MERCADO_PAGO_WEBHOOK_SECRET não estiver definido, aceita (dev/mock).
+ * Usa segredo efetivo (painel admin + .env). Se nenhum segredo estiver definido, aceita (dev/mock).
  * @see https://www.mercadopago.com.br/developers/pt/docs/your-integrations/notifications/webhooks
  */
-export function verifyMercadoPagoWebhookSignature(
+export async function verifyMercadoPagoWebhookSignature(
   rawBody: string,
   headers: Headers,
-): { ok: boolean; reason?: string } {
-  const secret = getMercadoPagoWebhookSecret();
+): Promise<{ ok: boolean; reason?: string }> {
+  const secret = await getEffectiveMercadoPagoWebhookSecret();
   if (!secret) return { ok: true };
 
   let parsed: { data?: { id?: string | number } };

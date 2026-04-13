@@ -157,7 +157,7 @@ export async function syncPaymentStatusFromGateway(pixPaymentId: string): Promis
   });
   if (!pix?.externalPaymentId) return { ok: false };
 
-  const provider = getPixProvider();
+  const provider = await getPixProvider();
   const status = await provider.getPaymentStatus(pix.externalPaymentId);
 
   if (status.statusApproved) {

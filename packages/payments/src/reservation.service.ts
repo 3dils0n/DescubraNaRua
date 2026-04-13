@@ -1,5 +1,10 @@
 import { prisma } from "@repo/db";
-import { generateExternalReference, generateReservationCode, getPublicAppUrl } from "@repo/shared";
+import {
+  generateExternalReference,
+  generateReservationCode,
+  getPublicAppUrl,
+  syntheticEmailForPix,
+} from "@repo/shared";
 import {
   PixInternalStatus,
   PixProvider,
@@ -26,13 +31,10 @@ function isValidEmail(s: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
 }
 
-/** E-mail técnico para o gateway Pix quando o comprador não informa e-mail (rifa sem pedido de e-mail). */
-export function syntheticEmailForPix(telefone: string): string {
-  const d = telefone.replace(/\D/g, "") || "0";
-  return `cliente+${d}@sem-email.rifa`;
-}
-
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+/** Re-export para compatibilidade (e-mail sintético definido em @repo/shared). */
+export { syntheticEmailForPix, isSyntheticCheckoutEmail } from "@repo/shared";
 
 function validateQuantityRules(
   qty: number,
@@ -129,7 +131,7 @@ export async function createReservationWithPix(input: CheckoutInput) {
   const externalRef = generateExternalReference("pix");
 
   const base = getPublicAppUrl();
-  const pixProvider = getPixProvider();
+  const pixProvider = await getPixProvider();
   const notificationUrl = `${base}/api/webhooks/mercadopago`;
 
   const [nomeParts, ...rest] = data.nome.trim().split(/\s+/);

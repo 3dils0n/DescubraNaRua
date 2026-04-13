@@ -1,4 +1,5 @@
 export * from "./env";
+export * from "./checkout-email";
 export * from "./constants";
 export * from "./code";
 export * from "./mask";

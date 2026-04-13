@@ -84,6 +84,20 @@ model Admin {
   updatedAt    DateTime @updatedAt @map("updated_at")
 }
 
+/// Configuração global editável no admin (Pix). Uma linha (id = default).
+/// null em pix_provider_override = herdar PIX_PROVIDER do .env
+model AppSettings {
+  id String @id @default("default")
+
+  pixProviderOverride PixProvider? @map("pix_provider_override")
+  mercadoPagoAccessToken   String? @map("mercado_pago_access_token") @db.Text
+  mercadoPagoWebhookSecret String? @map("mercado_pago_webhook_secret") @db.Text
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_settings")
+}
+
 model Raffle {
   id                       String              @id @default(cuid())
   slug                     String              @unique

@@ -53,7 +53,7 @@ export async function processWebhookInboxBatch(limit = 20): Promise<{ done: numb
         continue;
       }
 
-      const provider = getPixProvider();
+      const provider = await getPixProvider();
       const status = await provider.getPaymentStatus(paymentId);
       if (status.statusApproved) {
         await applyApprovedPaymentByExternalPaymentId(paymentId);

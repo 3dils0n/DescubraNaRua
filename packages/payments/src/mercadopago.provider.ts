@@ -1,15 +1,17 @@
 import { MercadoPagoConfig, Payment } from "mercadopago";
 import QRCode from "qrcode";
-import { getMercadoPagoAccessToken, getMercadoPagoWebhookSecret } from "@repo/shared";
+import { getMercadoPagoWebhookSecret } from "@repo/shared";
 import type { CreatePixInput, CreatePixResult, PaymentStatusResult, PixPaymentProvider } from "./types";
 
 export class MercadoPagoPixProvider implements PixPaymentProvider {
   private client: MercadoPagoConfig;
   private paymentApi: Payment;
+  private webhookSecretResolved?: string;
 
-  constructor(accessToken: string) {
+  constructor(accessToken: string, webhookSecret?: string) {
     this.client = new MercadoPagoConfig({ accessToken });
     this.paymentApi = new Payment(this.client);
+    this.webhookSecretResolved = webhookSecret?.trim() || undefined;
   }
 
   async createPixPayment(input: CreatePixInput): Promise<CreatePixResult> {
@@ -98,14 +100,12 @@ export class MercadoPagoPixProvider implements PixPaymentProvider {
   }
 
   verifyWebhookSignature(_payload: string, _headers: Headers): boolean {
-    const secret = getMercadoPagoWebhookSecret();
+    const secret = this.webhookSecretResolved ?? getMercadoPagoWebhookSecret();
     if (!secret) return true;
     return true;
   }
 }
 
-export function createMercadoPagoProviderFromEnv(): MercadoPagoPixProvider {
-  const token = getMercadoPagoAccessToken();
-  if (!token) throw new Error("MERCADO_PAGO_ACCESS_TOKEN ou MP_ACCESS_TOKEN ausente");
-  return new MercadoPagoPixProvider(token);
+export function createMercadoPagoProvider(accessToken: string, webhookSecret?: string): MercadoPagoPixProvider {
+  return new MercadoPagoPixProvider(accessToken, webhookSecret);
 }
