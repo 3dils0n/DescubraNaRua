@@ -30,6 +30,8 @@ export type RaffleFormInitial = {
   ativarContadorTempoReal: boolean;
   ativarWhatsapp: boolean;
   mensagemWhatsappPadrao: string | null;
+  checkoutPedirEmail: boolean;
+  checkoutPedirCpf: boolean;
   status: "DRAFT" | "ACTIVE" | "CLOSED" | "DRAWN";
   slug?: string;
 };
@@ -60,6 +62,8 @@ const defaultCreate = (): RaffleFormInitial => {
     ativarContadorTempoReal: true,
     ativarWhatsapp: true,
     mensagemWhatsappPadrao: "",
+    checkoutPedirEmail: false,
+    checkoutPedirCpf: false,
     status: "DRAFT",
   };
 };
@@ -121,6 +125,8 @@ export function RaffleForm({
           ativarContadorTempoReal: f.ativarContadorTempoReal,
           ativarWhatsapp: f.ativarWhatsapp,
           mensagemWhatsappPadrao: f.mensagemWhatsappPadrao || null,
+          checkoutPedirEmail: f.checkoutPedirEmail,
+          checkoutPedirCpf: f.checkoutPedirCpf,
           status: f.status,
         };
         const res = await adminFetch<{ id: string }>("/api/admin/raffles", {
@@ -154,6 +160,8 @@ export function RaffleForm({
             ativarContadorTempoReal: f.ativarContadorTempoReal,
             ativarWhatsapp: f.ativarWhatsapp,
             mensagemWhatsappPadrao: f.mensagemWhatsappPadrao || null,
+            checkoutPedirEmail: f.checkoutPedirEmail,
+            checkoutPedirCpf: f.checkoutPedirCpf,
             status: f.status,
           }),
         });
@@ -363,6 +371,32 @@ export function RaffleForm({
           onChange={(e) => set("mensagemWhatsappPadrao", e.target.value || null)}
         />
       </label>
+      <div className="rounded-xl border border-[#D4AF37]/20 bg-[#0d0d0d] p-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-[#D4AF37]">Checkout público</p>
+        <p className="mt-1 text-xs text-[#888]">
+          Por defeito só nome e WhatsApp. Ative abaixo se quiser pedir e-mail ou CPF (recomendado CPF para Pix real no Mercado Pago).
+        </p>
+        <div className="mt-3 flex flex-col gap-3">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-[#BDBDBD]">
+            <input
+              type="checkbox"
+              checked={f.checkoutPedirEmail}
+              onChange={(e) => set("checkoutPedirEmail", e.target.checked)}
+              className="rounded border-white/20 bg-[#161616]"
+            />
+            Pedir e-mail no checkout
+          </label>
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-[#BDBDBD]">
+            <input
+              type="checkbox"
+              checked={f.checkoutPedirCpf}
+              onChange={(e) => set("checkoutPedirCpf", e.target.checked)}
+              className="rounded border-white/20 bg-[#161616]"
+            />
+            Pedir CPF no checkout
+          </label>
+        </div>
+      </div>
       {err && <p className="text-sm text-red-400">{err}</p>}
       <div className="flex flex-wrap gap-3">
         <GoldButton type="submit" disabled={loading}>
