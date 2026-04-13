@@ -1,4 +1,4 @@
-# Descubra na Rua — Monorepo (Railway)
+# Descubra na Rua — Monorepo
 
 Plataforma de rifas com **Next.js** (`apps/web`), **worker** assíncrono (`apps/worker`), **cron** (`apps/cron`), **PostgreSQL + Prisma** (`packages/db`), integrações **Pix** (`packages/payments`) e **WhatsApp** (`packages/whatsapp`), e utilitários (`packages/shared`).
 
@@ -60,9 +60,14 @@ O `.env` com `DATABASE_URL` fica na **raiz** do repositório. Os scripts `npm ru
 
   Use `resolve` apenas se o schema no PostgreSQL for o mesmo que o `schema.prisma` atual (caso típico após `db push` alinhado ao repo).
 
-## Deploy Railway
+## Publicar em produção
 
-Veja **[docs/RAILWAY.md](./docs/RAILWAY.md)** para serviços, variáveis e comandos.
+| Plataforma | Documentação |
+|------------|----------------|
+| **Render** | **[docs/RENDER.md](./docs/RENDER.md)** — Postgres, web (`npm run start`), worker (`npm run worker`), cron e variáveis. |
+| **Railway** | **[docs/RAILWAY.md](./docs/RAILWAY.md)** — mesma arquitetura; passos específicos da Railway. |
+
+Em ambos: build na **raiz** com `npm install && npm run build`, arranque do web com `npm run start`, migrations com `npm run db:deploy` e `DATABASE_URL` no `.env` ou nas variáveis do painel.
 
 ## Webhook Pix
 
