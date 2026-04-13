@@ -33,6 +33,8 @@ type RaffleDetail = {
   ativarContadorTempoReal: boolean;
   ativarWhatsapp: boolean;
   mensagemWhatsappPadrao: string | null;
+  checkoutPedirEmail: boolean;
+  checkoutPedirCpf: boolean;
   numeroVencedor: { id: string; numero: string } | null;
   _count: { numbers: number; reservations: number };
 };
@@ -94,6 +96,8 @@ export default function AdminRifaDetailPage() {
     ativarContadorTempoReal: r.ativarContadorTempoReal,
     ativarWhatsapp: r.ativarWhatsapp,
     mensagemWhatsappPadrao: r.mensagemWhatsappPadrao,
+    checkoutPedirEmail: r.checkoutPedirEmail,
+    checkoutPedirCpf: r.checkoutPedirCpf,
     status: r.status as RaffleFormInitial["status"],
   };
 

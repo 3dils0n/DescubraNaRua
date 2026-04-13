@@ -30,6 +30,9 @@ export async function POST(req: Request) {
       NUMEROS_INDISPONIVEIS: 409,
       CONCORRENCIA_NUMEROS: 409,
       ESTOQUE_INSUFICIENTE: 409,
+      EMAIL_OBRIGATORIO: 400,
+      EMAIL_INVALIDO: 400,
+      CPF_OBRIGATORIO: 400,
     };
     const status = map[msg] ?? 400;
     return NextResponse.json({ error: msg }, { status });

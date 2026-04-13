@@ -32,6 +32,8 @@ const createSchema = z.object({
   ativarContadorTempoReal: z.boolean().optional(),
   ativarWhatsapp: z.boolean().optional(),
   mensagemWhatsappPadrao: z.string().optional().nullable(),
+  checkoutPedirEmail: z.boolean().optional(),
+  checkoutPedirCpf: z.boolean().optional(),
   status: z.enum(["DRAFT", "ACTIVE", "CLOSED", "DRAWN"]).optional(),
   slug: z.string().min(2).optional(),
 });
@@ -132,6 +134,8 @@ export async function POST(req: Request) {
       ativarContadorTempoReal: body.ativarContadorTempoReal ?? true,
       ativarWhatsapp: body.ativarWhatsapp ?? true,
       mensagemWhatsappPadrao: body.mensagemWhatsappPadrao ?? null,
+      checkoutPedirEmail: body.checkoutPedirEmail ?? false,
+      checkoutPedirCpf: body.checkoutPedirCpf ?? false,
       status: (body.status as RaffleStatus) ?? RaffleStatus.DRAFT,
     },
   });
