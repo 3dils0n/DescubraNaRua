@@ -5,6 +5,7 @@ import { adminFetch } from "@/lib/admin-fetch";
 import { AdminPageHeader } from "@/components/admin/admin-page-header";
 import { adminCard, adminInput, adminLabel, adminBtnSecondary } from "@/components/admin/admin-styles";
 import { GoldButton } from "@/components/gold-button";
+import { PixConfigGuideDialog, PixModeExplanation } from "@/components/admin/pix-config-help";
 
 type Cfg = {
   pixProvider: string;
@@ -203,6 +204,7 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
   const [clearing, setClearing] = useState<"access" | "webhook" | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [pixGuideOpen, setPixGuideOpen] = useState(false);
 
   useEffect(() => {
     setPixProviderMode(pixModeFromCfg(c));
@@ -257,8 +259,8 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
       });
       setMsg(
         which === "access"
-          ? "Access token removido do painel. Passa a usar o .env (se existir)."
-          : "Segredo do webhook removido do painel. Passa a usar o .env (se existir).",
+          ? "Access token removido deste painel. O site volta a usar a configuração guardada no servidor (se existir)."
+          : "Segredo do webhook removido deste painel. O site volta a usar a configuração guardada no servidor (se existir).",
       );
       setAccessToken("");
       setWebhookSecret("");
@@ -274,9 +276,9 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
 
   return (
     <div id="admin-pix-config" className={`${adminCard} mb-8 ring-1 ring-[#D4AF37]/25`}>
-      <h3 className="text-base font-semibold text-[#D4AF37]">Configurar Pix (Mercado Pago)</h3>
+      <h3 className="text-base font-semibold text-[#D4AF37]">Configurar pagamentos PIX</h3>
       <p className="mt-1 text-xs text-[#888]">
-        Aqui defines o modo (mock / Mercado Pago) e os tokens guardados na base. Provider efetivo:{" "}
+        Escolha como o site gera e confirma os PIX. Modo em uso neste momento:{" "}
         <span className="font-mono text-[#D4AF37]">{c.pix.effectiveProvider ?? "—"}</span>
       </p>
       {!tableOk && (
@@ -288,24 +290,39 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
         </div>
       )}
       <p className="mt-2 text-xs text-[#666]">
-        Valores vazios ao guardar (depois de editares o campo) removem o segredo do painel e voltam ao{" "}
-        <code className="text-[#888]">.env</code>. Usa &quot;Remover… do painel&quot; para apagar sem editar o campo.
+        Se deixar um campo de senha em branco e guardar, o painel deixa de guardar esse valor aqui e o site pode usar a
+        cópia existente no servidor. O botão &quot;Remover… do painel&quot; apaga só a cópia guardada aqui, sem precisar
+        de escrever no campo.
       </p>
+
+      <div className="mt-3">
+        <button
+          type="button"
+          className={adminBtnSecondary}
+          onClick={() => setPixGuideOpen(true)}
+        >
+          📘 Ver guia completo de configuração
+        </button>
+      </div>
+
+      <PixConfigGuideDialog open={pixGuideOpen} onClose={() => setPixGuideOpen(false)} />
 
       <form onSubmit={(e) => void submit(e)} className="mt-4 max-w-xl space-y-4">
         <label className={adminLabel}>
-          Modo Pix
+          Como o site trata o PIX
           <select
             className={adminInput}
             value={pixProviderMode}
             disabled={!tableOk}
             onChange={(e) => setPixProviderMode(e.target.value as "inherit" | "mock" | "mercadopago")}
           >
-            <option value="inherit">Herdar do .env (PIX_PROVIDER)</option>
-            <option value="mock">Mock (testes)</option>
-            <option value="mercadopago">Mercado Pago</option>
+            <option value="inherit">Usar configuração do servidor (já definida pela equipa)</option>
+            <option value="mock">Modo de teste — simulação, sem dinheiro real</option>
+            <option value="mercadopago">Mercado Pago — PIX real para os participantes</option>
           </select>
         </label>
+
+        <PixModeExplanation mode={pixProviderMode} />
 
         <label className={adminLabel}>
           Access Token (Mercado Pago)
@@ -317,8 +334,8 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
             disabled={!tableOk}
             placeholder={
               c.pix.database?.hasAccessTokenInDatabase
-                ? "•••• definido no painel — escreve para substituir"
-                : "Opcional — ou usa MERCADO_PAGO_ACCESS_TOKEN no .env"
+                ? "•••• já guardado aqui — escreva só se quiser substituir"
+                : "Cole o Access Token do Mercado Pago ou deixe vazio para usar o servidor"
             }
             onChange={(e) => {
               setAccessToken(e.target.value);
@@ -349,8 +366,8 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
             disabled={!tableOk}
             placeholder={
               c.pix.database?.hasWebhookSecretInDatabase
-                ? "•••• definido no painel — escreve para substituir"
-                : "Opcional — ou usa MERCADO_PAGO_WEBHOOK_SECRET no .env"
+                ? "•••• já guardado aqui — escreva só se quiser substituir"
+                : "Segredo do webhook (opcional se já estiver só no servidor)"
             }
             onChange={(e) => {
               setWebhookSecret(e.target.value);
@@ -404,8 +421,11 @@ function AdminPixSection({ c, onSaved }: { c: Cfg; onSaved: () => void }) {
       </div>
 
       <div className="mt-6 border-t border-white/10 pt-4">
-        <p className="text-xs font-medium text-[#888]">Variáveis no servidor (.env) — só leitura</p>
-        <p className="mt-1 text-xs text-[#666]">Usadas no modo &quot;Herdar&quot; ou quando o campo não está preenchido no painel.</p>
+        <p className="text-xs font-medium text-[#888]">Configuração no servidor — só leitura (uso técnico)</p>
+        <p className="mt-1 text-xs text-[#666]">
+          Estes nomes são os da hospedagem. Entram em uso no modo &quot;servidor&quot; ou quando não guarda o valor neste
+          painel.
+        </p>
         <div className="mt-2">
           <Row name="PIX_PROVIDER">
             <span className="rounded border border-white/10 px-2 py-0.5 font-mono text-sm">{c.pixProvider}</span>
@@ -458,7 +478,7 @@ export default function AdminConfiguracoesPage() {
     <div>
       <AdminPageHeader
         title="Configurações"
-        subtitle="O bloco no topo permite configurar o Pix na base de dados. Abaixo: conta, URLs e outras variáveis de ambiente (só leitura)."
+        subtitle="No topo: PIX com textos de ajuda e guia passo a passo. Abaixo: conta, URLs e estado técnico do servidor (só leitura)."
         breadcrumbs={[{ label: "Admin", href: "/admin" }, { label: "Configurações" }]}
       />
       {err && <p className="text-red-400">{err}</p>}
