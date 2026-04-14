@@ -141,7 +141,7 @@ export default async function HomePage() {
                         <ProgressGold value={pct} />
                       </div>
                       <div className="mt-6">
-                        <GoldButton href={`/rifas/${r.slug}/checkout`} className="w-full">
+                        <GoldButton href={`/rifas/${r.slug}`} className="w-full">
                           Comprar
                         </GoldButton>
                       </div>
