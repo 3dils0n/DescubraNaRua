@@ -49,6 +49,41 @@ const statusLabels: Record<string, string> = {
   BLOCKED: "bloqueado",
 };
 
+function firstValidQty(min: number, max: number, multiplo: number | null): number {
+  if (!multiplo || multiplo <= 1) return Math.min(max, min);
+  let q = min;
+  const rem = q % multiplo;
+  if (rem !== 0) q += multiplo - rem;
+  if (q <= max) return q;
+  const belowMax = max - (max % multiplo);
+  if (belowMax >= min) return belowMax;
+  return Math.min(max, min);
+}
+
+function snapQty(qty: number, min: number, max: number, multiplo: number | null): number {
+  const clamped = Math.min(max, Math.max(min, Math.round(qty)));
+  if (!multiplo || multiplo <= 1) return clamped;
+  if (clamped % multiplo === 0) return clamped;
+  const down = clamped - (clamped % multiplo);
+  const up = clamped + (multiplo - (clamped % multiplo));
+  const opts: number[] = [];
+  if (down >= min && down <= max) opts.push(down);
+  if (up >= min && up <= max) opts.push(up);
+  if (opts.length === 0) return firstValidQty(min, max, multiplo);
+  return opts.reduce((a, b) => (Math.abs(b - clamped) < Math.abs(a - clamped) ? b : a));
+}
+
+function quantityPassesRules(
+  qty: number,
+  min: number,
+  max: number,
+  multiplo: number | null,
+): boolean {
+  if (qty < min || qty > max) return false;
+  if (multiplo && multiplo > 1 && qty % multiplo !== 0) return false;
+  return true;
+}
+
 export function RaffleClient({ initial }: { initial: Raffle }) {
   const [stats, setStats] = useState<StatPayload | null>(null);
   const [ranking, setRanking] = useState<{ position: number; name: string; quantity: number }[]>([]);
@@ -57,7 +92,13 @@ export function RaffleClient({ initial }: { initial: Raffle }) {
   const [mode, setMode] = useState<"manual" | "random">(
     initial.modoSelecaoNumeros === "RANDOM" ? "random" : "manual",
   );
-  const [qtyRandom, setQtyRandom] = useState(initial.quantidadeMinimaCompra);
+  const [qtyRandom, setQtyRandom] = useState(() =>
+    firstValidQty(
+      initial.quantidadeMinimaCompra,
+      initial.quantidadeMaximaCompra,
+      initial.multiploCompra,
+    ),
+  );
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const slug = initial.slug;
@@ -115,12 +156,30 @@ export function RaffleClient({ initial }: { initial: Raffle }) {
     window.location.href = `/rifas/${slug}/checkout`;
   };
 
+  const isRandomFlow =
+    initial.modoSelecaoNumeros === "RANDOM" ||
+    (initial.modoSelecaoNumeros === "MIXED" && mode === "random");
+
   const canProceed = useMemo(() => {
-    if (initial.modoSelecaoNumeros === "RANDOM") return qtyRandom >= initial.quantidadeMinimaCompra;
-    if (initial.modoSelecaoNumeros === "MIXED" && mode === "random")
-      return qtyRandom >= initial.quantidadeMinimaCompra;
-    return selected.size >= initial.quantidadeMinimaCompra;
-  }, [initial, mode, qtyRandom, selected]);
+    const min = initial.quantidadeMinimaCompra;
+    const max = initial.quantidadeMaximaCompra;
+    const mult = initial.multiploCompra;
+    if (isRandomFlow) {
+      return quantityPassesRules(qtyRandom, min, max, mult);
+    }
+    return quantityPassesRules(selected.size, min, max, mult);
+  }, [initial, isRandomFlow, qtyRandom, selected]);
+
+  const multiploHint = useMemo(() => {
+    const m = initial.multiploCompra;
+    if (!m || m <= 1 || isRandomFlow) return null;
+    const qty = selected.size;
+    const min = initial.quantidadeMinimaCompra;
+    if (qty < min) return null;
+    if (qty % m === 0) return null;
+    const need = m - (qty % m);
+    return `Faltam ${need} número(s) para o total ser múltiplo de ${m}.`;
+  }, [initial.multiploCompra, initial.quantidadeMinimaCompra, isRandomFlow, selected.size]);
 
   const urgency =
     remaining <= 50 ? "Últimos números acabando" : sold > 200 ? "Rifa acelerando agora" : "Oportunidade limitada";
@@ -226,8 +285,29 @@ export function RaffleClient({ initial }: { initial: Raffle }) {
                     type="number"
                     min={initial.quantidadeMinimaCompra}
                     max={initial.quantidadeMaximaCompra}
+                    step={initial.multiploCompra && initial.multiploCompra > 1 ? initial.multiploCompra : 1}
                     value={qtyRandom}
-                    onChange={(e) => setQtyRandom(Number(e.target.value))}
+                    onChange={(e) => {
+                      const v = e.target.value;
+                      if (v === "") return;
+                      const n = Number(v);
+                      if (Number.isNaN(n)) return;
+                      setQtyRandom(
+                        snapQty(n, initial.quantidadeMinimaCompra, initial.quantidadeMaximaCompra, initial.multiploCompra),
+                      );
+                    }}
+                    onBlur={(e) => {
+                      const n = Number(e.target.value);
+                      if (e.target.value === "" || Number.isNaN(n)) {
+                        setQtyRandom(
+                          firstValidQty(
+                            initial.quantidadeMinimaCompra,
+                            initial.quantidadeMaximaCompra,
+                            initial.multiploCompra,
+                          ),
+                        );
+                      }
+                    }}
                     className="mt-2 w-full max-w-xs rounded-xl border border-white/10 bg-[#161616] px-4 py-3 text-[#F5F5F5]"
                   />
                 </div>
@@ -323,7 +403,11 @@ export function RaffleClient({ initial }: { initial: Raffle }) {
       <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-[#D4AF37]/20 bg-[#0A0A0A]/95 px-4 py-4 backdrop-blur-md">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 sm:flex-row">
           <div className="text-sm text-[#BDBDBD]">
-            <span className="text-[#F5F5F5]">{selected.size || qtyRandom}</span> números selecionados
+            <span className="text-[#F5F5F5]">{isRandomFlow ? qtyRandom : selected.size}</span> números
+            selecionados
+            {multiploHint ? (
+              <span className="mt-1 block text-xs text-[#E8B84A]">{multiploHint}</span>
+            ) : null}
           </div>
           <GoldButton onClick={goCheckout} disabled={!canProceed}>
             Continuar para Pix
